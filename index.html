@@ -713,9 +713,45 @@ function playerHit() {
   }
 }
 
+function findSafeSpawn() {
+  // 从底部中心开始向上搜索安全出生点
+  const startCol = Math.floor(COLS / 2);
+  const startRow = ROWS - 3;
+
+  // 螺旋搜索，从中心向上展开
+  for (let radius = 0; radius < Math.max(COLS, ROWS); radius++) {
+    for (let dr = 0; dr >= -radius; dr--) {
+      for (let dc = -radius; dc <= radius; dc++) {
+        const col = startCol + dc;
+        const row = startRow + dr;
+        if (col < 1 || col >= COLS - 1 || row < 1 || row >= ROWS - 1) continue;
+
+        const cell = map[row][col];
+        // 检查该格及其相邻格是否安全（不能是 BRICK、STEEL、BASE、WATER）
+        const blocked = [BRICK, STEEL, BASE, WATER];
+        if (blocked.includes(cell)) continue;
+
+        // 检查周围4个方向是否也都安全
+        let safe = true;
+        for (const [dc2, dr2] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+          const nc = col + dc2;
+          const nr = row + dr2;
+          if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+            if (blocked.includes(map[nr][nc])) { safe = false; break; }
+          }
+        }
+        if (safe) return { x: col * CELL + CELL / 2, y: row * CELL + CELL / 2 };
+      }
+    }
+  }
+  // 兜底：返回一个远端安全位置
+  return { x: CELL * 1.5, y: CELL * 1.5 };
+}
+
 function resetPlayerPosition() {
-  player.x = (COLS / 2) * CELL; // 靠近中间
-  player.y = (ROWS - 2) * CELL;
+  const spawn = findSafeSpawn();
+  player.x = spawn.x;
+  player.y = spawn.y;
   player.dir = DIR.UP;
   player.alive = true;
   // 清除玩家附近的敌人
@@ -982,7 +1018,8 @@ function applyPowerUp(type) {
 function initLevel() {
   const mapIdx = (level - 1) % MAPS.length;
   map = MAPS[mapIdx].map(row => [...row]);
-  player = new Tank((COLS / 2) * CELL, (ROWS - 2) * CELL, DIR.UP, COLORS.PLAYER, COLORS.PLAYER_DARK);
+  const spawn = findSafeSpawn();
+  player = new Tank(spawn.x, spawn.y, DIR.UP, COLORS.PLAYER, COLORS.PLAYER_DARK);
   enemies = [];
   bullets = [];
   explosions = [];
