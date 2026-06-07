@@ -5,66 +5,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>坦克大战 - Tank Battle</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
   background: #1a1a2e;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100dvh;
   font-family: 'Courier New', monospace;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 .game-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+  padding: 5px;
+  /* 整体等比缩放到屏幕宽度 */
+  max-width: 100vw;
+  transform-origin: top center;
 }
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 780px;
-  padding: 8px 16px;
+  max-width: 100%;
+  padding: 6px 12px;
   background: #16213e;
   border: 2px solid #0f3460;
   border-radius: 8px;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 .header .info {
   color: #e94560;
-  font-size: 18px;
+  font-size: clamp(12px, 2.3vw, 18px);
   font-weight: bold;
+  white-space: nowrap;
 }
 .header .info span {
   color: #f0c040;
-  margin: 0 4px;
+  margin: 0 2px;
 }
-canvas {
+.canvas-container {
+  position: relative;
+  max-width: 100%;
+}
+.canvas-container canvas {
+  display: block;
+  width: 100%;
+  height: auto;
   border: 3px solid #0f3460;
   border-radius: 4px;
   background: #1a1a1a;
 }
 .controls {
   display: flex;
-  gap: 30px;
+  gap: 15px;
   color: #888;
-  font-size: 13px;
-  padding: 8px 16px;
+  font-size: clamp(10px, 1.7vw, 13px);
+  padding: 6px 12px;
   background: #16213e;
   border: 2px solid #0f3460;
   border-radius: 8px;
   width: 780px;
+  max-width: 100%;
   justify-content: center;
+  flex-wrap: wrap;
 }
 .controls kbd {
   display: inline-block;
   background: #0f3460;
   color: #e94560;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
-  margin: 0 2px;
+  margin: 0 1px;
   font-family: 'Courier New', monospace;
   font-weight: bold;
 }
@@ -75,32 +95,136 @@ canvas {
   transform: translate(-50%, -50%);
   text-align: center;
   pointer-events: none;
+  z-index: 10;
 }
 .overlay-text {
   color: #fff;
-  font-size: 48px;
+  font-size: clamp(24px, 6vw, 48px);
   font-weight: bold;
   text-shadow: 3px 3px 0 #e94560, -1px -1px 0 #000;
   white-space: nowrap;
 }
 .overlay-sub {
   color: #f0c040;
-  font-size: 18px;
+  font-size: clamp(12px, 2.5vw, 18px);
   margin-top: 10px;
   animation: blink 1s infinite;
 }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ===== 触屏控件 ===== */
+.touch-controls {
+  display: none; /* 默认隐藏，JS检测后显示 */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40vh;
+  pointer-events: none;
+  z-index: 100;
+  padding: 10px;
+}
+.touch-controls.active {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+/* 方向键区域 */
+.dpad {
+  display: grid;
+  grid-template-areas:
+    ". up ."
+    "left . right"
+    ". down .";
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+  width: min(180px, 45vw);
+  height: min(180px, 45vw);
+  pointer-events: auto;
+}
+.dpad-btn {
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: min(24px, 7vw);
+  color: rgba(255,255,255,0.7);
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.dpad-btn:active, .dpad-btn.pressed {
+  background: rgba(233,69,96,0.5);
+  border-color: #e94560;
+  color: #fff;
+}
+.dpad-up { grid-area: up; }
+.dpad-down { grid-area: down; }
+.dpad-left { grid-area: left; }
+.dpad-right { grid-area: right; }
+
+/* 射击 + 功能按钮 */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  pointer-events: auto;
+}
+.btn-fire {
+  width: min(80px, 20vw);
+  height: min(80px, 20vw);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ff6b6b, #c0392b);
+  border: 3px solid #e74c3c;
+  color: #fff;
+  font-size: min(14px, 4vw);
+  font-weight: bold;
+  letter-spacing: 2px;
+  box-shadow: 0 4px 15px rgba(255,0,0,0.4);
+  transition: transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-fire:active, .btn-fire.pressed {
+  transform: scale(0.9);
+  box-shadow: 0 1px 5px rgba(255,0,0,0.6);
+  background: radial-gradient(circle at 40% 35%, #ff4444, #a93226);
+}
+.btn-start {
+  padding: 12px 24px;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 25px;
+  color: #fff;
+  font-size: min(13px, 3.5vw);
+  letter-spacing: 1px;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-start:active { background: rgba(255,255,255,0.25); }
+
+/* 桌面端隐藏触屏控件 */
+@media (hover: hover) and (pointer: fine) {
+  .touch-controls { display: none !important; }
+}
+/* 横屏手机优化 */
+@media (max-width: 900px) and (orientation: landscape) {
+  .touch-controls { height: 35vh; }
+  .dpad { width: min(140px, 25vw); height: min(140px, 25vw); }
+  .btn-fire { width: min(60px, 15vw); height: min(60px, 15vw); }
+}
 </style>
 </head>
 <body>
-<div class="game-wrapper">
+<div class="game-wrapper" id="gameWrapper">
   <div class="header">
     <div class="info">🏆 分数: <span id="score">0</span></div>
     <div class="info">❤️ 生命: <span id="lives">3</span></div>
     <div class="info">🎯 关卡: <span id="level">1</span></div>
     <div class="info">💀 剩余敌人: <span id="enemies-left">20</span></div>
   </div>
-  <div style="position: relative;">
+  <div class="canvas-container" id="canvasContainer">
     <canvas id="game" width="780" height="600"></canvas>
     <div class="overlay" id="overlay">
       <div class="overlay-text" id="overlay-text">坦克大战</div>
@@ -111,6 +235,20 @@ canvas {
     <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或 <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> 移动</span>
     <span><kbd>Space</kbd> 射击</span>
     <span><kbd>Enter</kbd> 开始/暂停</span>
+  </div>
+</div>
+
+<!-- 触屏控件 -->
+<div class="touch-controls" id="touchControls">
+  <div class="dpad">
+    <button class="dpad-btn dpad-up" id="btnUp"    ontouchstart="return false">▲</button>
+    <button class="dpad-btn dpad-left" id="btnLeft"  ontouchstart="return false">◀</button>
+    <button class="dpad-btn dpad-right" id="btnRight" ontouchstart="return false">▶</button>
+    <button class="dpad-btn dpad-down" id="btnDown"  ontouchstart="return false">▼</button>
+  </div>
+  <div class="action-buttons">
+    <button class="btn-fire" id="btnFire" ontouchstart="return false">射击</button>
+    <button class="btn-start" id="btnStart" ontouchstart="return false">开始/暂停</button>
   </div>
 </div>
 
@@ -1211,6 +1349,89 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+// ============ 触屏控件处理 ============
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+const touchControls = document.getElementById('touchControls');
+
+// 将屏幕坐标转换为 Canvas 坐标
+function getCanvasPos(clientX, clientY) {
+  const rect = CANVAS.getBoundingClientRect();
+  const scaleX = CANVAS.width / rect.width;
+  const scaleY = CANVAS.height / rect.height;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY,
+  };
+}
+
+// 触屏按钮状态映射到 keys
+const touchKeys = {};
+
+function setupTouchButton(el, keyCode) {
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    touchKeys[keyCode] = true;
+    keys[keyCode] = true;
+    el.classList.add('pressed');
+    // 如果是 Enter 键，触发 Enter 逻辑
+    if (keyCode === 'Enter') {
+      handleEnterKey();
+    }
+  });
+  el.addEventListener('pointerup', (e) => {
+    e.preventDefault();
+    touchKeys[keyCode] = false;
+    keys[keyCode] = false;
+    el.classList.remove('pressed');
+  });
+  el.addEventListener('pointerleave', (e) => {
+    touchKeys[keyCode] = false;
+    keys[keyCode] = false;
+    el.classList.remove('pressed');
+  });
+  el.addEventListener('pointercancel', (e) => {
+    touchKeys[keyCode] = false;
+    keys[keyCode] = false;
+    el.classList.remove('pressed');
+  });
+  // 防止右键菜单和长按选择
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
+// 统一处理 Enter 键逻辑
+function handleEnterKey() {
+  if (gameState === 'start') {
+    resetGame();
+  } else if (gameState === 'over') {
+    resetGame();
+  } else if (gameState === 'levelComplete') {
+    initLevel();
+    gameState = 'playing';
+    document.getElementById('overlay').style.display = 'none';
+    updateHUD();
+  } else if (gameState === 'playing') {
+    gameState = 'paused';
+    document.getElementById('overlay-text').textContent = '⏸ 已暂停';
+    document.getElementById('overlay-sub').textContent = '按 Enter 继续';
+    document.getElementById('overlay').style.display = 'block';
+  } else if (gameState === 'paused') {
+    gameState = 'playing';
+    document.getElementById('overlay').style.display = 'none';
+  }
+}
+
+// 初始化触屏控件
+if (isTouchDevice) {
+  touchControls.classList.add('active');
+
+  setupTouchButton(document.getElementById('btnUp'), 'ArrowUp');
+  setupTouchButton(document.getElementById('btnDown'), 'ArrowDown');
+  setupTouchButton(document.getElementById('btnLeft'), 'ArrowLeft');
+  setupTouchButton(document.getElementById('btnRight'), 'ArrowRight');
+  setupTouchButton(document.getElementById('btnFire'), 'Space');
+  setupTouchButton(document.getElementById('btnStart'), 'Enter');
+}
+
 // ============ 事件监听 ============
 window.addEventListener('keydown', (e) => {
   keys[e.code] = true;
@@ -1221,24 +1442,7 @@ window.addEventListener('keydown', (e) => {
 
   if (e.code === 'Enter') {
     e.preventDefault();
-    if (gameState === 'start') {
-      resetGame();
-    } else if (gameState === 'over') {
-      resetGame();
-    } else if (gameState === 'levelComplete') {
-      initLevel();
-      gameState = 'playing';
-      document.getElementById('overlay').style.display = 'none';
-      updateHUD();
-    } else if (gameState === 'playing') {
-      gameState = 'paused';
-      document.getElementById('overlay-text').textContent = '⏸ 已暂停';
-      document.getElementById('overlay-sub').textContent = '按 Enter 继续';
-      document.getElementById('overlay').style.display = 'block';
-    } else if (gameState === 'paused') {
-      gameState = 'playing';
-      document.getElementById('overlay').style.display = 'none';
-    }
+    handleEnterKey();
   }
 });
 
